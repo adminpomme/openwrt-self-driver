@@ -17,17 +17,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Maximize Space
+      - name: Maximize Space & Swap
         run: |
-          # 彻底删除不需要的大型环境 (Dotnet, Android, Haskell, CodeQL, Docker images等)
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo rm -rf /usr/local/share/boost
-          # 清理 Docker 镜像
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
           sudo docker image prune -a -f
-          # 稍微减小 Swap 大小（从 8G 降到 4G），平衡内存与磁盘
           sudo fallocate -l 4G /swapfile
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
@@ -43,15 +36,18 @@ jobs:
       - name: Clone Source
         run: git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
 
-      - name: Load Custom Feeds & Packages (DIY1)
+      - name: Execute DIY-P1
         run: |
           chmod +x $DIY_P1_SH
           ./$DIY_P1_SH
+
+      - name: Update & Install Feeds
+        run: |
           cd openwrt
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: Load Config & DIY2
+      - name: Execute DIY-P2
         run: |
           [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
           chmod +x $DIY_P2_SH
@@ -59,19 +55,14 @@ jobs:
           ../$DIY_P2_SH
           make defconfig
 
-      - name: Download Library
+      - name: Download & Compile
         run: |
           cd openwrt
           make download -j8
-
-      - name: Compile (Single Thread)
-        run: |
-          cd openwrt
-          # 依然坚持单线程以确保 4G Swap 够用
-          make -j1 V=s
+          make -j$(nproc) || make -j1 V=s
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: OpenWrt_v24.10_Final_Stable
+          name: OpenWrt_v24.10_Final
           path: openwrt/bin/targets/x86/64/*.img.gz
