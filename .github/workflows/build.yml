@@ -1,9 +1,16 @@
 YAML
 
-name: Build OpenWrt x86_64
+name: Build OpenWrt 24.10 Final
 
 on:
-  workflow_dispatch: # 支持手动点击运行
+  workflow_dispatch:
+
+env:
+  REPO_URL: https://github.com/openwrt/openwrt
+  REPO_BRANCH: openwrt-24.10
+  CONFIG_FILE: .config
+  DIY_P1_SH: diy-part1.sh
+  DIY_P2_SH: diy-part2.sh
 
 jobs:
   build:
@@ -20,24 +27,20 @@ jobs:
           sudo -E apt-get -qq clean
 
       - name: Clone Source
-        run: git clone --depth 1 https://github.com/coolsnowwolf/lede openwrt
+        run: git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
 
-      - name: Update Feeds
+      - name: Load Custom Feeds (DIY1)
         run: |
-          cd openwrt
-          echo "src-git passwall https://github.com/xiaorouji/openwrt-passwall.git;main" >> feeds.conf.default
-          echo "src-git passwall_packages https://github.com/xiaorouji/openwrt-passwall-packages.git;main" >> feeds.conf.default
-          echo "src-git mosdns https://github.com/Iinex/luci-app-mosdns.git;main" >> feeds.conf.default
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a
+          chmod +x $DIY_P1_SH
+          ./$DIY_P1_SH
+          cd openwrt && ./scripts/feeds update -a && ./scripts/feeds install -a
 
-      - name: Load Config & DIY
+      - name: Load Config & DIY2
         run: |
-          [ -e .config ] && cp .config openwrt/.config
-          chmod +x diy.sh
-          cd openwrt
-          ../diy.sh
-          make defconfig
+          [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
+          chmod +x $DIY_P2_SH
+          ./$DIY_P2_SH
+          cd openwrt && make defconfig
 
       - name: Download & Compile
         run: |
@@ -45,8 +48,8 @@ jobs:
           make download -j8
           make -j$(nproc) || make -j1 V=s
 
-      - name: Upload Firmware
+      - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: OpenWrt_Generic_x86_64
-          path: openwrt/bin/targets/x86/64/
+          name: OpenWrt_24.10_Final_Generic
+          path: openwrt/bin/targets/x86/64/*.img.gz
