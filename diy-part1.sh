@@ -1,13 +1,17 @@
 #!/bin/bash
-# 进入 package 目录
+# 进入插件目录
 cd openwrt/package
 
-# 1. 强行拉取 PassWall (包括核心包)
+# 1. 拉取 PassWall 及其依赖
 git clone --depth 1 https://github.com/xiaorouji/openwrt-passwall.git
-git clone --depth 1 https://github.com/xiaorouji/openwrt-passwall-packages.git passwall_deps
+git clone --depth 1 https://github.com/xiaorouji/openwrt-passwall-packages.git pw_deps
 
-# 2. 强行拉取 MosDNS
+# 2. 拉取 MosDNS
 git clone --depth 1 https://github.com/Iinex/luci-app-mosdns.git
 
-# 3. 强行拉取 AdGuardHome 及常用插件源 (kiddin9)
-git clone --depth 1 https://github.com/kiddin9/openwrt-packages.git extra_pkgs
+# 3. 拉取 kiddin9 仓库（包含 AdGuardHome 和多拨管理）
+git clone --depth 1 https://github.com/kiddin9/openwrt-packages.git kiddin9_pkgs
+
+# 4. 拉取 SmartDNS
+git clone --depth 1 https://github.com/pymumu/luci-app-smartdns.git
+git clone --depth 1 https://github.com/pymumu/smartdns.git sdns_core
