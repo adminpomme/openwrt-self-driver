@@ -21,11 +21,11 @@ jobs:
         run: |
           sudo -E apt-get -qq update
           sudo -E apt-get -qq install $(curl -fsSL https://is.gd/depends_ubuntu_2204)
-          # 清理磁盘空间
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          # 1. 深度清理磁盘空间，防止空间不足导致奔溃
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost
           sudo -E apt-get -qq autoremove --purge
           sudo -E apt-get -qq clean
-          # 开启 Swap 解决断连问题
+          # 2. 建立 8GB 虚拟内存 (Swap) 缓解 OOM
           sudo fallocate -l 8G /swapfile
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
@@ -50,15 +50,20 @@ jobs:
           ../$DIY_P2_SH
           make defconfig
 
-      - name: Download & Compile
+      - name: Download Library
         run: |
           cd openwrt
+          # 下载源码包可以使用多线程，提高速度
           make download -j8
-          # 使用 -j2 编译，平衡速度与稳定性
-          make -j2 || make -j1 V=s
+
+      - name: Compile (Single Thread Mode)
+        run: |
+          cd openwrt
+          # 强制单线程编译，并输出详细日志
+          make -j1 V=s
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: OpenWrt_v24.10_Final_Generic
+          name: OpenWrt_v24.10_Final_Stable
           path: openwrt/bin/targets/x86/64/*.img.gz
