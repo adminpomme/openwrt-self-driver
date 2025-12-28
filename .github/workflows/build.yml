@@ -48,16 +48,16 @@ jobs:
           ./scripts/feeds install -a
 
       - name: Execute DIY-P2
+        working-directory: ./openwrt
         run: |
-          [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
-          chmod +x $DIY_P2_SH
-          cd openwrt
+          [ -e ../$CONFIG_FILE ] && cp ../$CONFIG_FILE .config
+          chmod +x ../$DIY_P2_SH
           ../$DIY_P2_SH
           make defconfig
 
       - name: Download & Compile
+        working-directory: ./openwrt
         run: |
-          cd openwrt
           make download -j8
           make -j$(nproc) || make -j1 V=s
 
