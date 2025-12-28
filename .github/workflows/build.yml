@@ -1,4 +1,4 @@
-name: Build OpenWrt 24.10 Final
+name: Build OpenWrt 24.10 Official Final
 
 on:
   workflow_dispatch:
@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4 # 升级到 v4
+        uses: actions/checkout@v4
 
       - name: Init Environment
         run: |
@@ -31,14 +31,21 @@ jobs:
         run: |
           chmod +x $DIY_P1_SH
           ./$DIY_P1_SH
-          cd openwrt && ./scripts/feeds update -a && ./scripts/feeds install -a
+          cd openwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          # 针对之前报错的强制安装补丁
+          ./scripts/feeds install -p passwall -f
+          ./scripts/feeds install -p mosdns -f
+          ./scripts/feeds install -p kiddin9 -f
 
       - name: Load Config & DIY2
         run: |
           [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
           chmod +x $DIY_P2_SH
-          ./$DIY_P2_SH
-          cd openwrt && make defconfig
+          cd openwrt
+          ../$DIY_P2_SH
+          make defconfig
 
       - name: Download & Compile
         run: |
@@ -47,8 +54,7 @@ jobs:
           make -j$(nproc) || make -j1 V=s
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4 # 核心修复：升级到 v4
+        uses: actions/upload-artifact@v4
         with:
-          name: OpenWrt_24.10_Final_Generic
-          path: openwrt/bin/targets/x86/64/
-          if-no-files-found: error # 如果没有生成文件则报错，方便排查
+          name: OpenWrt_v24.10_Final_Image
+          path: openwrt/bin/targets/x86/64/*.img.gz
