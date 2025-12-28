@@ -1,0 +1,52 @@
+YAML
+
+name: Build OpenWrt x86_64
+
+on:
+  workflow_dispatch: # 支持手动点击运行
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Init Environment
+        run: |
+          sudo -E apt-get -qq update
+          sudo -E apt-get -qq install $(curl -fsSL https://is.gd/depends_ubuntu_2204)
+          sudo -E apt-get -qq autoremove --purge
+          sudo -E apt-get -qq clean
+
+      - name: Clone Source
+        run: git clone --depth 1 https://github.com/coolsnowwolf/lede openwrt
+
+      - name: Update Feeds
+        run: |
+          cd openwrt
+          echo "src-git passwall https://github.com/xiaorouji/openwrt-passwall.git;main" >> feeds.conf.default
+          echo "src-git passwall_packages https://github.com/xiaorouji/openwrt-passwall-packages.git;main" >> feeds.conf.default
+          echo "src-git mosdns https://github.com/Iinex/luci-app-mosdns.git;main" >> feeds.conf.default
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Load Config & DIY
+        run: |
+          [ -e .config ] && cp .config openwrt/.config
+          chmod +x diy.sh
+          cd openwrt
+          ../diy.sh
+          make defconfig
+
+      - name: Download & Compile
+        run: |
+          cd openwrt
+          make download -j8
+          make -j$(nproc) || make -j1 V=s
+
+      - name: Upload Firmware
+        uses: actions/upload-artifact@v3
+        with:
+          name: OpenWrt_Generic_x86_64
+          path: openwrt/bin/targets/x86/64/
