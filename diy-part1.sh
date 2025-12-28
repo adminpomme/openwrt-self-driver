@@ -1,6 +1,11 @@
 #!/bin/bash
-# 进入插件目录
-cd openwrt/package
+
+# 确保进入 openwrt 目录执行（如果 build.yml 已经 cd 了则此步双保险）
+[ -d openwrt ] && cd openwrt
+
+# 创建自定义插件存放目录
+mkdir -p package/custom
+cd package/custom
 
 # 1. 拉取 PassWall 及其依赖
 git clone --depth 1 https://github.com/xiaorouji/openwrt-passwall.git
@@ -9,7 +14,7 @@ git clone --depth 1 https://github.com/xiaorouji/openwrt-passwall-packages.git p
 # 2. 拉取 MosDNS
 git clone --depth 1 https://github.com/Iinex/luci-app-mosdns.git
 
-# 3. 拉取 kiddin9 仓库（包含 AdGuardHome 和多拨管理）
+# 3. 拉取 kiddin9 仓库 (包含 AdGuardHome 和多拨)
 git clone --depth 1 https://github.com/kiddin9/openwrt-packages.git kiddin9_pkgs
 
 # 4. 拉取 SmartDNS
