@@ -1,4 +1,33 @@
-- name: Load Custom Feeds (DIY1)
+name: Build OpenWrt 24.10 Official Final
+
+on:
+  workflow_dispatch:
+
+env:
+  REPO_URL: https://github.com/openwrt/openwrt
+  REPO_BRANCH: openwrt-24.10
+  CONFIG_FILE: .config
+  DIY_P1_SH: diy-part1.sh
+  DIY_P2_SH: diy-part2.sh
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Init Environment
+        run: |
+          sudo -E apt-get -qq update
+          sudo -E apt-get -qq install $(curl -fsSL https://is.gd/depends_ubuntu_2204)
+          sudo -E apt-get -qq autoremove --purge
+          sudo -E apt-get -qq clean
+
+      - name: Clone Source
+        run: git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
+
+      - name: Load Custom Feeds & Packages (DIY1)
         run: |
           chmod +x $DIY_P1_SH
           ./$DIY_P1_SH
@@ -12,5 +41,16 @@
           chmod +x $DIY_P2_SH
           cd openwrt
           ../$DIY_P2_SH
-          # 这一步会根据我们手动下载的插件自动更新 .config
           make defconfig
+
+      - name: Download & Compile
+        run: |
+          cd openwrt
+          make download -j8
+          make -j$(nproc) || make -j1 V=s
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenWrt_v24.10_Final_Generic
+          path: openwrt/bin/targets/x86/64/*.img.gz
